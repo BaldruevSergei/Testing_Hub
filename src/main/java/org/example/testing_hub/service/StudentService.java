@@ -1,4 +1,5 @@
 package org.example.testing_hub.service;
+
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.testing_hub.dto.StudentDTO;
@@ -6,97 +7,97 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.security.SecureRandom;
+import java.util.*;
 
 @Service
 public class StudentService {
 
-    public List<StudentDTO> loadStudentsFromUrl(String fileUrl) {
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Set<String> generatedLogins = new HashSet<>();
+
+    public List<StudentDTO> parseExcel(InputStream inputStream, String defaultGrade) {
         List<StudentDTO> students = new ArrayList<>();
-
-        try (InputStream inputStream = new URL(fileUrl).openStream()) {
-            Workbook workbook = new XSSFWorkbook(inputStream);
-            Sheet sheet = workbook.getSheetAt(0);
-
-            for (Row row : sheet) {
-                if (row.getRowNum() == 0) {
-                    // Пропускаем заголовок
-                    continue;
-                }
-
-                Cell nameCell = row.getCell(0);
-                Cell surnameCell = row.getCell(1);
-                Cell gradeCell = row.getCell(2);
-
-                String name = nameCell != null ? nameCell.getStringCellValue().trim() : "";
-                String surname = surnameCell != null ? surnameCell.getStringCellValue().trim() : "";
-                String grade = gradeCell != null ? gradeCell.getStringCellValue().trim() : "";
-
-                // Генерация логина и пароля
-                String login = generateUniqueLogin(grade);
-                String password = generateRandomPassword();
-
-                // Создаем объект StudentDTO и добавляем в список
-                StudentDTO student = new StudentDTO(name, surname, grade, login, password);
-                students.add(student);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка загрузки файла с URL: " + fileUrl);
-        }
-
-        return students;
-    }
-
-    public List<StudentDTO> parseExcel(InputStream inputStream) {
-        List<StudentDTO> students = new ArrayList<>();
+        int studentNumber = 1;
 
         try (Workbook workbook = new XSSFWorkbook(inputStream)) {
             Sheet sheet = workbook.getSheetAt(0);
 
             for (Row row : sheet) {
-                if (row.getRowNum() == 0) {
-                    // Пропускаем заголовок
-                    continue;
-                }
+                if (row.getRowNum() == 0) continue; // Пропускаем заголовок
 
-                Cell nameCell = row.getCell(0);
-                Cell surnameCell = row.getCell(1);
-                Cell gradeCell = row.getCell(2);
+                Cell fullNameCell = row.getCell(1); // Предполагаем, что имя и фамилия в первой ячейке
 
-                String name = nameCell != null ? nameCell.getStringCellValue().trim() : "";
-                String surname = surnameCell != null ? surnameCell.getStringCellValue().trim() : "";
-                String grade = gradeCell != null ? gradeCell.getStringCellValue().trim() : "";
+                if (fullNameCell == null) continue; // Пропускаем строки с пустыми данными
+
+                // Читаем значение из ячейки
+                String fullName = getCellValueAsString(fullNameCell).trim();
+
+                if (fullName.isEmpty()) continue; // Пропускаем строки с пустыми именами
+
+                // Разделяем имя и фамилию
+                String[] nameParts = fullName.split(" ", 2);
+                String name = nameParts.length > 0 ? nameParts[0].trim() : "Неизвестно";
+                String surname = nameParts.length > 1 ? nameParts[1].trim() : "Неизвестно";
 
                 // Генерация логина и пароля
-                String login = generateUniqueLogin(grade);
+                String login = generateUniqueLogin(defaultGrade.replaceAll("\\D", ""));
                 String password = generateRandomPassword();
 
-                // Создаем объект StudentDTO и добавляем в список
-                StudentDTO student = new StudentDTO(name, surname, grade, login, password);
+                // Создаем объект StudentDTO
+                StudentDTO student = new StudentDTO(studentNumber++, name, surname, defaultGrade, login, password);
                 students.add(student);
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка обработки файла");
+            throw new RuntimeException("Ошибка обработки файла Excel", e);
         }
 
         return students;
     }
 
-    // Генерация уникального логина на основе класса
-    private String generateUniqueLogin(String grade) {
-        String randomPart = String.format("%04d", (int) (Math.random() * 10000)); // 4 случайных цифры
-        return grade + randomPart;
+
+
+
+
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return DateUtil.isCellDateFormatted(cell)
+                        ? cell.getDateCellValue().toString()
+                        : String.valueOf((int) cell.getNumericCellValue());
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            default:
+                return "";
+        }
     }
 
-    // Генерация случайного пароля
+    private String generateUniqueLogin(String gradeNumber) {
+        String login;
+        do {
+            login = "User" + gradeNumber + String.format("%04d", RANDOM.nextInt(10000));
+        } while (!generatedLogins.add(login));
+
+        return login;
+    }
+
     private String generateRandomPassword() {
-        StringBuilder password = new StringBuilder();
-        for (int i = 0; i < 6; i++) { // 6 случайных цифр
-            password.append((int) (Math.random() * 10));
+        return String.format("%06d", RANDOM.nextInt(1000000));
+    }
+
+
+
+
+
+
+    public List<StudentDTO> loadStudentsFromUrl(String fileUrl, String defaultGrade) {
+        try (InputStream inputStream = new URL(fileUrl).openStream()) {
+            return parseExcel(inputStream, defaultGrade);
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка загрузки студентов из URL", e);
         }
-        return password.toString();
     }
 }
