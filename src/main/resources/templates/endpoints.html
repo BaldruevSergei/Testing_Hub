@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Endpoints</title>
+</head>
+<body>
+<h1>Список эндпоинтов</h1>
+<table border="1">
+    <tr>
+        <th>Метод</th>
+        <th>Эндпоинт</th>
+    </tr>
+    <tr th:each="endpoint : ${endpoints}">
+        <td th:text="${endpoint.key}">GET</td>
+        <td th:text="${endpoint.value}">/example</td>
+    </tr>
+</table>
+</body>
+</html>
