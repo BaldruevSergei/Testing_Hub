@@ -1,6 +1,8 @@
 package org.example.testing_hub.service;
 import org.example.testing_hub.dto.UserUpdateDTO;
+import org.example.testing_hub.entity.ClassEntity;
 import org.example.testing_hub.entity.User;
+import org.example.testing_hub.repository.ClassRepository;
 import org.example.testing_hub.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ClassRepository classRepository;
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -43,21 +48,32 @@ public class UserService {
     public List<User> getStudentsByClass(Long classId) {
         return userRepository.findByClassEntity_Id(classId);
     }
+
     public User updateUser(Long id, UserUpdateDTO updatedUserDto) {
-        // Найти пользователя по ID
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id " + id));
 
-        // Обновить только те поля, которые есть в DTO
         existingUser.setFirstName(updatedUserDto.getFirstName());
         existingUser.setLastName(updatedUserDto.getLastName());
         existingUser.setEmail(updatedUserDto.getEmail());
 
-
-
-        // Сохранить изменения
         return userRepository.save(existingUser);
     }
 
+    // Метод для сохранения студентов
+    public void saveStudents(List<User> students, String grade) {
+        // Проверить, существует ли класс
+        ClassEntity classEntity = classRepository.findByGrade(grade)
+                .orElseGet(() -> {
+                    ClassEntity newClass = new ClassEntity();
+                    newClass.setGrade(grade);
+                    return classRepository.save(newClass);
+                });
 
+        // Привязать класс к каждому студенту и сохранить в базе
+        students.forEach(student -> {
+            student.setClassEntity(classEntity);
+            userRepository.save(student);
+        });
+    }
 }

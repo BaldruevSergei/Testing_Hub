@@ -14,7 +14,7 @@ public class ClassEntity {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name; // Название класса (например, "9А")
+    private String grade; // Название класса (например, "9А")
 
     @Column
     private String description; // Поле description для описания класса
