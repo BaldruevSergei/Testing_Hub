@@ -13,7 +13,7 @@ public class Feedback {
 
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
-    private User student; // Ученик, оставивший обратную связь
+    private Student student; // Ученик, оставивший обратную связь
 
     @ManyToOne
     @JoinColumn(name = "test_id", nullable = false)

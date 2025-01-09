@@ -40,7 +40,6 @@ public class ClassService {
 
         // Обновляем поля
         existingClass.setGrade(updatedClass.getGrade());
-        existingClass.setDescription(updatedClass.getDescription());
         existingClass.setStudents(updatedClass.getStudents());
 
         return classRepository.save(existingClass);

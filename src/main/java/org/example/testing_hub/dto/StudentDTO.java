@@ -1,26 +1,24 @@
 package org.example.testing_hub.dto;
 
 public class StudentDTO {
-    private int studentNumber;
-    private String name;      // Имя
-    private String surname;   // Фамилия
-    private String grade;     // Класс (например: "8А")
-    private String login;     // Логин (например: "User8001")
-    private String password;  // Пароль (например: "875342")
+    private int studentNumber; // Номер студента
+    private String firstName;  // Имя
+    private String lastName;   // Фамилия
+    private String grade;      // Класс (например: "8А")
+    private String login;      // Логин (например: "User8001")
+    private String password;   // Пароль (например: "875342")
 
     // Конструктор с параметрами
-    public StudentDTO(int studentNumber,String name, String surname, String grade, String login, String password) {
+    public StudentDTO(int studentNumber, String firstName, String lastName, String grade, String login, String password) {
         this.studentNumber = studentNumber;
-        this.name = name;
-        this.surname = surname;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.grade = grade;
         this.login = login;
         this.password = password;
     }
 
     // Геттеры и сеттеры
-
-
     public int getStudentNumber() {
         return studentNumber;
     }
@@ -29,20 +27,20 @@ public class StudentDTO {
         this.studentNumber = studentNumber;
     }
 
-    public String getName() {
-        return name;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
     }
 
-    public String getSurname() {
-        return surname;
+    public String getLastName() {
+        return lastName;
     }
 
-    public void setSurname(String surname) {
-        this.surname = surname;
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public String getGrade() {
@@ -72,9 +70,9 @@ public class StudentDTO {
     @Override
     public String toString() {
         return "StudentDTO{" +
-                "studentNumber='" + studentNumber + '\'' +
-                ", name='" + name + '\'' +
-                ", surname='" + surname + '\'' +
+                "studentNumber=" + studentNumber +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
                 ", grade='" + grade + '\'' +
                 ", login='" + login + '\'' +
                 ", password='" + password + '\'' +

@@ -24,5 +24,5 @@ public class Notification {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User recipient; // Получатель уведомления
+    private Teacher recipient; // Получатель уведомления
 }

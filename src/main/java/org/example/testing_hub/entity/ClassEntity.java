@@ -2,10 +2,12 @@ package org.example.testing_hub.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
+@NoArgsConstructor
 @Entity
 @Table(name = "classes")
 public class ClassEntity {
@@ -14,11 +16,8 @@ public class ClassEntity {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String grade; // Название класса (например, "9А")
+    private String grade; // Класс (например, "8А", "10Б")
 
-    @Column
-    private String description; // Поле description для описания класса
-
-    @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL)
-    private List<User> students; // Список учеников, связанных с классом
+    @OneToMany(mappedBy = "classEntity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Student> students; // Список студентов, связанных с этим классом
 }

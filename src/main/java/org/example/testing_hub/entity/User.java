@@ -4,33 +4,26 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
-@Entity
-@Table(name = "users")
-public class User {
+@MappedSuperclass
+public abstract class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String firstName;
+    @Column(nullable = false, unique = true)
+    private String login; // Логин пользователя
 
     @Column(nullable = false)
-    private String lastName;
-
-    @Column(nullable = true)
-    private String email;
-
-    @Column(nullable = true)
-    private String username;
-
-    @Column(nullable = false)
-    private String password;
+    private String password; // Пароль пользователя
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
-    private Role role;
+    @Column(nullable = false)
+    private Role role; // Роль пользователя (ADMIN, TEACHER, STUDENT)
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_id")
-    private ClassEntity classEntity; // Связь с классом
+    @Column(nullable = false)
+    private String firstName; // Имя пользователя
+
+    @Column(nullable = false)
+    private String lastName; // Фамилия пользователя
 }

@@ -21,5 +21,5 @@ public class Log {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user; // Пользователь, совершивший действие
+    private Teacher user; // Пользователь, совершивший действие
 }

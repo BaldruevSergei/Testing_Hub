@@ -24,5 +24,5 @@ public class FileEntity {
 
     @ManyToOne
     @JoinColumn(name = "uploaded_by", nullable = false)
-    private User uploadedBy; // Кто загрузил файл
+    private Teacher uploadedBy; // Кто загрузил файл
 }

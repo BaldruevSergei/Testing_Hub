@@ -6,12 +6,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.example.testing_hub.dto.StudentDTO;
+import org.example.testing_hub.entity.Student;
 import org.example.testing_hub.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/students")
@@ -29,13 +32,61 @@ public class StudentController {
             @ApiResponse(responseCode = "500", description = "Внутренняя ошибка сервера", content = @Content)
     })
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
-    public List<StudentDTO> uploadStudents(@RequestParam("file") MultipartFile file,
-                                           @RequestParam("defaultGrade") String defaultGrade) {
+    public ResponseEntity<List<StudentDTO>> uploadStudents(@RequestParam("file") MultipartFile file,
+                                                           @RequestParam("defaultGrade") String defaultGrade) {
         try {
-            // Передача файла в сервис для обработки
-            return studentService.processAndSaveStudents(file.getInputStream(), defaultGrade);
+            List<StudentDTO> students = studentService.processAndSaveStudents(file.getInputStream(), defaultGrade);
+            return ResponseEntity.ok(students);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка загрузки файла", e);
+            return ResponseEntity.internalServerError().body(null);
         }
+    }
+
+    @Operation(summary = "Получить всех студентов")
+    @GetMapping
+    public ResponseEntity<List<Student>> getAllStudents() {
+        return ResponseEntity.ok(studentService.findStudentsByClass("default"));
+    }
+
+    @Operation(summary = "Поиск студента по логину")
+    @GetMapping("/login/{login}")
+    public ResponseEntity<Student> getStudentByLogin(@PathVariable String login) {
+        Optional<Student> student = studentService.findStudentByLogin(login);
+        return student.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Поиск студентов по имени")
+    @GetMapping("/firstName/{firstName}")
+    public ResponseEntity<List<Student>> getStudentsByFirstName(@PathVariable String firstName) {
+        return ResponseEntity.ok(studentService.findStudentsByFirstName(firstName));
+    }
+
+    @Operation(summary = "Поиск студентов по фамилии")
+    @GetMapping("/lastName/{lastName}")
+    public ResponseEntity<List<Student>> getStudentsByLastName(@PathVariable String lastName) {
+        return ResponseEntity.ok(studentService.findStudentsByLastName(lastName));
+    }
+
+    @Operation(summary = "Поиск студентов по имени и фамилии")
+    @GetMapping("/fullName")
+    public ResponseEntity<List<Student>> getStudentsByFullName(@RequestParam String firstName,
+                                                               @RequestParam String lastName) {
+        return ResponseEntity.ok(studentService.findStudentsByFullName(firstName, lastName));
+    }
+
+    @Operation(summary = "Поиск студентов по классу")
+    @GetMapping("/class/{grade}")
+    public ResponseEntity<List<Student>> getStudentsByClass(@PathVariable String grade) {
+        return ResponseEntity.ok(studentService.findStudentsByClass(grade));
+    }
+
+    @Operation(summary = "Поиск студентов по имени, фамилии и классу")
+    @GetMapping("/fullNameAndClass")
+    public ResponseEntity<List<Student>> getStudentsByFullNameAndClass(@RequestParam String firstName,
+                                                                       @RequestParam String lastName,
+                                                                       @RequestParam String grade) {
+        return ResponseEntity.ok(studentService.findStudentsByFullNameAndClass(firstName, lastName, grade));
     }
 }

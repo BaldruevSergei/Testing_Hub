@@ -18,7 +18,7 @@ public class Course {
 
     @ManyToOne
     @JoinColumn(name = "teacher_id", nullable = false)
-    private User teacher;
+    private Teacher teacher;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<Schedule> schedules;
