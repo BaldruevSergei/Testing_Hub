@@ -23,7 +23,7 @@ public class StudentService {
 
     private static final Logger logger = LoggerFactory.getLogger(StudentService.class);
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final Set<String> generatedLogins = new HashSet<>();
+    private static final Set<String> GENERATED_LOGINS = new HashSet<>();
 
     @Autowired
     private ClassService classService;
@@ -35,52 +35,42 @@ public class StudentService {
      * Обработка Excel-файла и сохранение студентов.
      */
     @Transactional
-    public List<StudentDTO> processAndSaveStudents(InputStream inputStream, String defaultGrade) {
-        logger.info("Начата обработка Excel-файла для класса {}", defaultGrade);
-        List<StudentDTO> studentDTOs = parseExcel(inputStream, defaultGrade);
+    public List<StudentDTO> processAndSaveStudents(InputStream inputStream) {
+        logger.info("Начата обработка Excel-файла...");
 
-        ClassEntity classEntity = classService.saveClass(defaultGrade);
+        List<StudentDTO> studentDTOs = parseExcel(inputStream);
+
+        if (studentDTOs.isEmpty()) {
+            logger.warn("Файл не содержит данных студентов.");
+            return Collections.emptyList();
+        }
+
+        String grade = studentDTOs.get(0).getGrade();
+        ClassEntity classEntity = classService.saveClass(grade);
 
         studentDTOs.forEach(dto -> {
             Student student = convertToStudent(dto, classEntity);
-            if (!studentRepository.existsByLogin(student.getLogin())) {
+            if (!existsStudentByLogin(student.getLogin())) {
                 studentRepository.save(student);
                 logger.info("Студент {} {} успешно сохранен.", student.getFirstName(), student.getLastName());
             } else {
-                logger.warn("Студент с логином {} уже существует.", student.getLogin());
+                logger.warn("Студент с логином {} уже существует. Пропуск сохранения.", student.getLogin());
             }
         });
 
+        logger.info("Обработка Excel-файла завершена.");
         return studentDTOs;
     }
 
     /**
-     * Сохранение списка студентов с привязкой к классу.
+     * Методы для работы с репозиторием.
      */
-    @Transactional
-    public void saveStudentsWithClass(List<Student> students, String grade) {
-        ClassEntity classEntity = classService.saveClass(grade);
-
-        students.forEach(student -> {
-            student.setClassEntity(classEntity);
-            if (!studentRepository.existsByLogin(student.getLogin())) {
-                studentRepository.save(student);
-                logger.info("Студент {} {} успешно сохранен.", student.getFirstName(), student.getLastName());
-            } else {
-                logger.warn("Студент с логином {} уже существует.", student.getLogin());
-            }
-        });
-    }
-
-    /**
-     * Методы из репозитория.
-     */
-    public Optional<Student> findStudentByLogin(String login) {
-        return studentRepository.findByLogin(login);
-    }
-
     public boolean existsStudentByLogin(String login) {
         return studentRepository.existsByLogin(login);
+    }
+
+    public List<Student> findStudentsByClassName(String className) {
+        return studentRepository.findByClassName(className);
     }
 
     public List<Student> findStudentsByFirstName(String firstName) {
@@ -95,70 +85,61 @@ public class StudentService {
         return studentRepository.findByFirstNameAndLastName(firstName, lastName);
     }
 
-    public List<Student> findStudentsByClass(String grade) {
-        return studentRepository.findByClassEntity_Grade(grade);
+    public List<Student> findStudentsByFullNameAndClass(String firstName, String lastName, String className) {
+        return studentRepository.findByFullNameAndClass(firstName, lastName, className);
     }
 
-    public List<Student> findStudentsByFullNameAndClass(String firstName, String lastName, String grade) {
-        return studentRepository.findByFirstNameAndLastNameAndClassEntity_Grade(firstName, lastName, grade);
-    }
+
 
     /**
      * Парсинг Excel-файла в список DTO студентов.
      */
-    public List<StudentDTO> parseExcel(InputStream inputStream, String defaultGrade) {
+    private List<StudentDTO> parseExcel(InputStream inputStream) {
         List<StudentDTO> students = new ArrayList<>();
-        int studentNumber = 1;
-
         try (Workbook workbook = new XSSFWorkbook(inputStream)) {
             Sheet sheet = workbook.getSheetAt(0);
 
+            String grade = extractGrade(sheet);
+            logger.info("Извлечен класс: {}", grade);
+
             for (Row row : sheet) {
-                // Пропускаем первую строку с заголовками
-                if (row.getRowNum() == 0) continue;
+                if (row.getRowNum() < 3) continue; // Пропуск первых строк
 
-                // Получаем ячейки
-                Cell nameCell = row.getCell(0);
-                Cell gradeCell = row.getCell(1);
-
-                // Пропускаем строки с пустыми значениями
-                if (nameCell == null || nameCell.getStringCellValue().trim().isEmpty()) {
-                    continue;
+                StudentDTO studentDTO = parseRow(row, students.size() + 1, grade);
+                if (studentDTO != null) {
+                    students.add(studentDTO);
                 }
-
-                String[] nameParts = nameCell.getStringCellValue().split(" ", 2);
-                String firstName = nameParts.length > 0 ? nameParts[0].trim() : "Неизвестно";
-                String lastName = nameParts.length > 1 ? nameParts[1].trim() : "Неизвестно";
-
-                String grade = gradeCell != null ? gradeCell.getStringCellValue().trim() : defaultGrade;
-
-                students.add(new StudentDTO(studentNumber++, firstName, lastName, grade, generateUniqueLogin(grade), generateRandomPassword()));
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException("Ошибка обработки файла Excel: " + e.getMessage(), e);
         }
 
         return students;
     }
 
+    /**
+     * Извлечение названия класса из Excel.
+     */
+    private String extractGrade(Sheet sheet) {
+        Row headerRow = sheet.getRow(0);
+        Cell gradeCell = headerRow != null ? headerRow.getCell(2) : null;
+        return gradeCell != null ? gradeCell.getStringCellValue().split(":")[0].trim() : "Неизвестно";
+    }
 
     /**
      * Парсинг одной строки Excel.
      */
-    private StudentDTO parseRow(Row row, int studentNumber, String defaultGrade) {
-        Cell fullNameCell = row.getCell(1);
-        if (fullNameCell == null || fullNameCell.getStringCellValue().trim().isEmpty()) {
+    private StudentDTO parseRow(Row row, int studentNumber, String grade) {
+        Cell nameCell = row.getCell(1);
+        if (nameCell == null || nameCell.getStringCellValue().trim().isEmpty()) {
             return null;
         }
 
-        String[] nameParts = fullNameCell.getStringCellValue().split(" ", 2);
+        String[] nameParts = nameCell.getStringCellValue().split(" ", 2);
         String firstName = nameParts.length > 0 ? nameParts[0].trim() : "Неизвестно";
         String lastName = nameParts.length > 1 ? nameParts[1].trim() : "Неизвестно";
 
-        String login = generateUniqueLogin(defaultGrade.replaceAll("\\D", ""));
-        String password = generateRandomPassword();
-
-        return new StudentDTO(studentNumber, firstName, lastName, defaultGrade, login, password);
+        return new StudentDTO(studentNumber, firstName, lastName, grade, generateUniqueLogin(grade), generateRandomPassword());
     }
 
     /**
@@ -177,12 +158,11 @@ public class StudentService {
     /**
      * Генерация уникального логина для студента.
      */
-    private String generateUniqueLogin(String gradeNumber) {
+    private String generateUniqueLogin(String grade) {
         String login;
         do {
-            login = "User" + gradeNumber + String.format("%04d", RANDOM.nextInt(10000));
-        } while (!generatedLogins.add(login));
-
+            login = "User" + grade.replaceAll("\\D", "") + String.format("%04d", RANDOM.nextInt(10000));
+        } while (!GENERATED_LOGINS.add(login));
         return login;
     }
 
@@ -193,15 +173,31 @@ public class StudentService {
         return String.format("%06d", RANDOM.nextInt(1000000));
     }
 
-    public List<StudentDTO> loadStudentsFromUrl(String fileUrl, String defaultGrade) {
-        try {
-            URL url = new URL(fileUrl);
-            try (InputStream inputStream = url.openStream()) {
-                return processAndSaveStudents(inputStream, defaultGrade);
-            }
+    /**
+     * Загрузка и обработка файла по URL.
+     */
+    public List<StudentDTO> loadStudentsFromUrl(String fileUrl) {
+        try (InputStream inputStream = new URL(fileUrl).openStream()) {
+            return processAndSaveStudents(inputStream);
         } catch (IOException e) {
             throw new RuntimeException("Ошибка загрузки файла с URL: " + fileUrl, e);
         }
+    }
+    @Transactional
+    public void saveStudentsWithClass(List<Student> students, String grade) {
+        // Сохранение класса
+        ClassEntity classEntity = classService.saveClass(grade);
+
+        // Сохранение студентов
+        students.forEach(student -> {
+            student.setClassEntity(classEntity);
+            if (!studentRepository.existsByLogin(student.getLogin())) {
+                studentRepository.save(student);
+                logger.info("Студент {} {} успешно сохранен.", student.getFirstName(), student.getLastName());
+            } else {
+                logger.warn("Студент с логином {} уже существует. Пропуск сохранения.", student.getLogin());
+            }
+        });
     }
 
 }

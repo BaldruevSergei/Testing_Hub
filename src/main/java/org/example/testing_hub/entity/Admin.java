@@ -10,11 +10,25 @@ import lombok.EqualsAndHashCode;
 @Table(name = "admins")
 public class Admin extends User {
 
-    @Column(nullable = false)
-    private String fullName; // Полное имя администратора
+    @Column
+    private String roleDescription; // Описание роли (например, "Суперадминистратор")
 
+    @Column(nullable = false)
     private String department;
-    public Admin() {
-        this.setRole(Role.ADMIN); // Устанавливаем роль по умолчанию
+
+    // Валидация email
+    @PrePersist
+    @PreUpdate
+    private void validateAndSetDefaults() {
+        // Проверка email
+        if (getEmail() == null || getEmail().isEmpty()) {
+            throw new IllegalStateException("Email is required for Admin");
+        }
+
+        // Установка роли по умолчанию
+        if (getRole() == null) { // Устанавливаем роль только если она еще не установлена
+            setRole(Role.ADMIN);
+        }
     }
+
 }

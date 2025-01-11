@@ -1,5 +1,6 @@
 package org.example.testing_hub.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,17 +11,27 @@ import lombok.EqualsAndHashCode;
 @Table(name = "students")
 public class Student extends User {
 
-    @Column(nullable = false)
-    private String firstName; // Имя
-
-    @Column(nullable = false)
-    private String lastName; // Фамилия
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id", nullable = false)
-    private ClassEntity classEntity; // Связь с классом
+    @JsonIgnore
+    private ClassEntity classEntity;
 
-    public Student() {
-        this.setRole(Role.STUDENT); // Устанавливаем роль по умолчанию
+    @Column(nullable = false)
+    private String grade; // Класс ученика (например, "9A")
+
+    @Column(insertable = false, updatable = false)
+    private String email;
+
+    @PrePersist
+    @PreUpdate
+    private void prepareStudentEntity() {
+        // Удаляем email для Student
+        if (getEmail() != null) {
+            setEmail(null);
+        }
+        // Устанавливаем роль, если она еще не установлена
+        if (getRole() == null) {
+            setRole(Role.STUDENT);
+        }
     }
 }

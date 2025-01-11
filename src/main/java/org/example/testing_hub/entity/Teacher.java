@@ -2,24 +2,26 @@ package org.example.testing_hub.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "teachers")
 public class Teacher extends User {
 
-    @Column(nullable = false, unique = true)
-    private String email; // Email для связи
+    @Column(nullable = false)
+    private String subject; // Предмет, который преподаёт учитель
 
     @Column(nullable = false)
-    private String firstName; // Имя
+    private String position; // Должность, например, "Классный руководитель"
 
-    @Column(nullable = false)
-    private String lastName; // Фамилия
-
-    public Teacher() {
-        this.setRole(Role.TEACHER); // Устанавливаем роль по умолчанию
+    @PrePersist
+    @PreUpdate
+    private void validateTeacherEntity() {
+        if (getEmail() == null || getEmail().isEmpty()) {
+            throw new IllegalStateException("Email is required for Teacher");
+        }
+        if (getRole() == null) {
+            setRole(Role.TEACHER); // Устанавливаем роль по умолчанию
+        }
     }
 }

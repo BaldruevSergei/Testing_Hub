@@ -1,125 +1,106 @@
 package org.example.testing_hub.service;
 
-import jakarta.validation.Valid;
-import org.example.testing_hub.dto.UserUpdateDTO;
-import org.example.testing_hub.entity.Student;
-import org.example.testing_hub.entity.Teacher;
-import org.example.testing_hub.entity.Admin;
 import org.example.testing_hub.entity.User;
-import org.example.testing_hub.repository.StudentRepository;
-import org.example.testing_hub.repository.TeacherRepository;
-import org.example.testing_hub.repository.AdminRepository;
+import org.example.testing_hub.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserService {
 
     @Autowired
-    private StudentRepository studentRepository;
+    private UserRepository userRepository;
 
-    @Autowired
-    private TeacherRepository teacherRepository;
-
-    @Autowired
-    private AdminRepository adminRepository;
-
-    public User findUserByLogin(String login) {
-        Optional<? extends User> user = Optional.empty();
-
-        user = studentRepository.findByLogin(login);
-        if (user.isEmpty()) {
-            user = teacherRepository.findByLogin(login);
-        }
-        if (user.isEmpty()) {
-            user = adminRepository.findByLogin(login);
-        }
-
-        return user.orElseThrow(() -> new RuntimeException("User not found"));
+    /**
+     * Получить всех пользователей.
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
     }
 
-    public boolean existsByLogin(String login) {
-        return studentRepository.existsByLogin(login) ||
-                teacherRepository.existsByLogin(login) ||
-                adminRepository.existsByLogin(login);
-    }
-
-    public List<Student> getAllStudents() {
-        return studentRepository.findAll();
-    }
-
-    public List<Teacher> getAllTeachers() {
-        return teacherRepository.findAll();
-    }
-
-    public List<Admin> getAllAdmins() {
-        return adminRepository.findAll();
-    }
-
+    /**
+     * Найти пользователя по ID.
+     */
     public User getUserById(Long id) {
-        Optional<? extends User> user = Optional.empty();
-
-        user = studentRepository.findById(id);
-        if (user.isEmpty()) {
-            user = teacherRepository.findById(id);
-        }
-        if (user.isEmpty()) {
-            user = adminRepository.findById(id);
-        }
-
-        return user.orElseThrow(() -> new RuntimeException("User not found"));
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден с ID: " + id));
     }
 
+    /**
+     * Найти пользователя по логину.
+     */
+    public User getUserByLogin(String login) {
+        return userRepository.findByLogin(login)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден с логином: " + login));
+    }
+
+    /**
+     * Найти пользователя по email.
+     */
+
+
+    /**
+     * Получить пользователей по роли.
+     */
+    public List<User> getUsersByRole(String role) {
+        return userRepository.findByRole(role);
+    }
+
+    /**
+     * Создать нового пользователя.
+     */
     public User createUser(User user) {
-        if (user instanceof Student) {
-            return studentRepository.save((Student) user);
-        } else if (user instanceof Teacher) {
-            return teacherRepository.save((Teacher) user);
-        } else if (user instanceof Admin) {
-            return adminRepository.save((Admin) user);
-        } else {
-            throw new RuntimeException("Unsupported user type");
+        if (userRepository.findByLogin(user.getLogin()).isPresent()) {
+            throw new RuntimeException("Пользователь с логином " + user.getLogin() + " уже существует");
         }
+
+        return userRepository.save(user);
     }
 
-    public User updateUser(Long id, @Valid UserUpdateDTO updateUserDto) {
-        User user = getUserById(id);
+    /**
+     * Обновить данные пользователя.
+     */
+    public User updateUser(Long id, User updatedUser) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден с ID: " + id));
 
-        if (updateUserDto.getFirstName() != null) {
-            user.setFirstName(updateUserDto.getFirstName());
+        // Обновление полей
+        if (updatedUser.getFirstName() != null) {
+            existingUser.setFirstName(updatedUser.getFirstName());
         }
-        if (updateUserDto.getLastName() != null) {
-            user.setLastName(updateUserDto.getLastName());
-        }
-        if (updateUserDto.getEmail() != null && user instanceof Teacher) {
-            ((Teacher) user).setEmail(updateUserDto.getEmail());
+        if (updatedUser.getLastName() != null) {
+            existingUser.setLastName(updatedUser.getLastName());
         }
 
-        if (user instanceof Student) {
-            return studentRepository.save((Student) user);
-        } else if (user instanceof Teacher) {
-            return teacherRepository.save((Teacher) user);
-        } else if (user instanceof Admin) {
-            return adminRepository.save((Admin) user);
-        } else {
-            throw new RuntimeException("Unsupported user type");
+        if (updatedUser.getLogin() != null) {
+            // Проверка, что логин уникален
+            if (userRepository.findByLogin(updatedUser.getLogin()).isPresent() &&
+                    !existingUser.getLogin().equals(updatedUser.getLogin())) {
+                throw new RuntimeException("Пользователь с логином " + updatedUser.getLogin() + " уже существует");
+            }
+            existingUser.setLogin(updatedUser.getLogin());
         }
+        // Добавьте другие поля при необходимости
+
+        return userRepository.save(existingUser);
     }
 
+    /**
+     * Удалить пользователя по ID.
+     */
     public void deleteUser(Long id) {
-        User user = getUserById(id);
-
-        if (user instanceof Student) {
-            studentRepository.delete((Student) user);
-        } else if (user instanceof Teacher) {
-            teacherRepository.delete((Teacher) user);
-        } else if (user instanceof Admin) {
-            adminRepository.delete((Admin) user);
-        } else {
-            throw new RuntimeException("Unsupported user type");
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("Пользователь не найден с ID: " + id);
         }
+        userRepository.deleteById(id);
+    }
+
+    /**
+     * Проверить существование пользователя по логину.
+     */
+    public boolean userExistsByLogin(String login) {
+        return userRepository.findByLogin(login).isPresent();
     }
 }

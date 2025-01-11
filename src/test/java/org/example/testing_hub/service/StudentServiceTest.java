@@ -60,19 +60,16 @@ class StudentServiceTest {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Students");
 
-            // Создаем заголовок
+            // Заполняем заголовок
             Row headerRow = sheet.createRow(0);
-            headerRow.createCell(0).setCellValue("Имя Фамилия");
-            headerRow.createCell(1).setCellValue("Класс");
+            headerRow.createCell(2).setCellValue("8А: Информатика (Бальдруев С. В.) - II четверть");
 
             // Добавляем данные студентов
-            Row student1Row = sheet.createRow(1);
-            student1Row.createCell(0).setCellValue("Иван Петров");
-            student1Row.createCell(1).setCellValue("10А");
+            Row student1Row = sheet.createRow(3);
+            student1Row.createCell(1).setCellValue("Иван Петров");
 
-            Row student2Row = sheet.createRow(2);
-            student2Row.createCell(0).setCellValue("Анна Сидорова");
-            student2Row.createCell(1).setCellValue("9Б");
+            Row student2Row = sheet.createRow(4);
+            student2Row.createCell(1).setCellValue("Анна Сидорова");
 
             workbook.write(outStream);
         }
@@ -88,8 +85,7 @@ class StudentServiceTest {
 
         // Вызываем метод для загрузки
         InputStream inputStream = mockWebServer.url("/test.xlsx").uri().toURL().openStream();
-
-        List<StudentDTO> students = studentService.parseExcel(inputStream, "10А");
+        List<StudentDTO> students = studentService.parseExcel(inputStream);
 
         // Проверяем результат
         assertNotNull(students, "Список студентов не должен быть null");
@@ -99,11 +95,12 @@ class StudentServiceTest {
         StudentDTO student1 = students.get(0);
         assertEquals("Иван", student1.getFirstName());
         assertEquals("Петров", student1.getLastName());
-        assertEquals("10А", student1.getGrade());
+        assertEquals("8А", student1.getGrade()); // Класс извлекается из заголовка
 
         // Проверяем данные второго студента
         StudentDTO student2 = students.get(1);
         assertEquals("Анна", student2.getFirstName());
         assertEquals("Сидорова", student2.getLastName());
-        assertEquals("9Б", student2.getGrade());
+        assertEquals("8А", student2.getGrade()); // Класс извлекается из заголовка
     }
+}

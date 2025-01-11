@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/students")
@@ -32,10 +31,9 @@ public class StudentController {
             @ApiResponse(responseCode = "500", description = "Внутренняя ошибка сервера", content = @Content)
     })
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
-    public ResponseEntity<List<StudentDTO>> uploadStudents(@RequestParam("file") MultipartFile file,
-                                                           @RequestParam("defaultGrade") String defaultGrade) {
+    public ResponseEntity<List<StudentDTO>> uploadStudents(@RequestParam("file") MultipartFile file) {
         try {
-            List<StudentDTO> students = studentService.processAndSaveStudents(file.getInputStream(), defaultGrade);
+            List<StudentDTO> students = studentService.processAndSaveStudents(file.getInputStream());
             return ResponseEntity.ok(students);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(null);
@@ -44,18 +42,20 @@ public class StudentController {
         }
     }
 
+    @Operation(summary = "Сохранение студентов с указанием класса")
+    @PostMapping("/save")
+    public ResponseEntity<String> saveStudentsWithClass(@RequestBody List<Student> students, @RequestParam String grade) {
+        studentService.saveStudentsWithClass(students, grade);
+        return ResponseEntity.ok("Студенты успешно сохранены с классом: " + grade);
+    }
+
     @Operation(summary = "Получить всех студентов")
     @GetMapping
     public ResponseEntity<List<Student>> getAllStudents() {
-        return ResponseEntity.ok(studentService.findStudentsByClass("default"));
+        return ResponseEntity.ok(studentService.findStudentsByClassName("default"));
     }
 
-    @Operation(summary = "Поиск студента по логину")
-    @GetMapping("/login/{login}")
-    public ResponseEntity<Student> getStudentByLogin(@PathVariable String login) {
-        Optional<Student> student = studentService.findStudentByLogin(login);
-        return student.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
+
 
     @Operation(summary = "Поиск студентов по имени")
     @GetMapping("/firstName/{firstName}")
@@ -79,7 +79,7 @@ public class StudentController {
     @Operation(summary = "Поиск студентов по классу")
     @GetMapping("/class/{grade}")
     public ResponseEntity<List<Student>> getStudentsByClass(@PathVariable String grade) {
-        return ResponseEntity.ok(studentService.findStudentsByClass(grade));
+        return ResponseEntity.ok(studentService.findStudentsByClassName(grade));
     }
 
     @Operation(summary = "Поиск студентов по имени, фамилии и классу")

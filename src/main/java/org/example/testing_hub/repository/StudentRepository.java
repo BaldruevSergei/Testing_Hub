@@ -2,30 +2,27 @@ package org.example.testing_hub.repository;
 
 import org.example.testing_hub.entity.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface StudentRepository extends JpaRepository<Student, Long> {
 
-    // Найти всех студентов по классу
-    List<Student> findByClassEntity_Grade(String grade);
+    boolean existsByLogin(String login); // Проверка существования студента по логину
 
-    // Найти студента по логину
-    Optional<Student> findByLogin(String login);
+    @Query("SELECT s FROM Student s WHERE s.classEntity.grade = :className")
+    List<Student> findByClassName(@Param("className") String className);
 
-    // Проверить существование студента по логину
-    boolean existsByLogin(String login);
+    @Query("SELECT s FROM Student s WHERE s.firstName = :firstName")
+    List<Student> findByFirstName(@Param("firstName") String firstName);
 
-    // Найти студентов по имени
-    List<Student> findByFirstName(String firstName);
+    @Query("SELECT s FROM Student s WHERE s.lastName = :lastName")
+    List<Student> findByLastName(@Param("lastName") String lastName);
 
-    // Найти студентов по фамилии
-    List<Student> findByLastName(String lastName);
+    @Query("SELECT s FROM Student s WHERE s.firstName = :firstName AND s.lastName = :lastName")
+    List<Student> findByFirstNameAndLastName(@Param("firstName") String firstName, @Param("lastName") String lastName);
 
-    // Найти студентов по имени и фамилии
-    List<Student> findByFirstNameAndLastName(String firstName, String lastName);
-
-    // Найти студентов по имени, фамилии и названию класса
-    List<Student> findByFirstNameAndLastNameAndClassEntity_Grade(String firstName, String lastName, String grade);
+    @Query("SELECT s FROM Student s WHERE s.firstName = :firstName AND s.lastName = :lastName AND s.classEntity.grade = :className")
+    List<Student> findByFullNameAndClass(@Param("firstName") String firstName, @Param("lastName") String lastName, @Param("className") String className);
 }
